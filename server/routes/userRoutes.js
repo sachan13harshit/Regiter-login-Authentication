@@ -4,6 +4,8 @@ const User = require("../models/userModel");
 const bcrypt = require('bcrypt');
 
 const router = express.Router();
+const jwt = require('jsonwebtoken');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 router.post("/register", async (req, res) => {
     try{
@@ -20,6 +22,10 @@ router.post("/register", async (req, res) => {
         req.body.password = hashedPassword;
         const newUser = new User(req.body);
         await newUser.save();
+        res.status(201).json({
+            success : true,
+            message : "User Created"
+        })
 
         return res.status(201).json('User Created');
     }
@@ -43,11 +49,32 @@ router.post("/login", async (req, res) => {
             message : "Invalid Password"
         })
     }
+    const token = jwt.sign({userId : user._id} , process.env.JWT_SECRET , {expiresIn : '1d'});
     res.send({
         success : true,
-        message : "User Logged In"
+        message : "User Logged In",
+        token : token
     })
   
+});
+
+
+router.get('/get-current-user' , authMiddleware , async (req , res)=>{
+    try{
+        const user = await User.findById(req.body.userId).select('-password');
+        res.send({
+            success : true,
+            message : "You are authorized ",
+            user : user
+        })
+    }
+    catch(error){
+        res.send({
+            success : false,
+            message : "You are not authorized"
+        })
+    }
+   
 });
 
 
